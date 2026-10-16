@@ -8,7 +8,7 @@ import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 
 import Form from '../src/index.ts';
-import { errorLines } from '../src/utils.tsx';
+import { errorLines, renderErrors } from '../src/utils.tsx';
 import WrappedForm from './WrappedForm.tsx';
 
 const user = userEvent.setup();
@@ -145,10 +145,16 @@ describe('aria-describedby', () => {
     },
   );
 
-  test('checkboxes widget with no options shows its errors through FieldErrorTemplate', () => {
+  test('checkboxes widget with no options shows its errors in its group, named by its label', () => {
     const { container } = render(
       <WrappedForm
-        schema={{ type: 'array', items: { type: 'string', enum: [] }, uniqueItems: true }}
+        schema={{
+          type: 'array',
+          title: 'Colors',
+          description: 'Pick some',
+          items: { type: 'string', enum: [] },
+          uniqueItems: true,
+        }}
         uiSchema={{ 'ui:widget': 'checkboxes' }}
         validator={validator}
         extraErrors={extraErrors}
@@ -156,7 +162,16 @@ describe('aria-describedby', () => {
       />,
     );
 
-    expect(container.querySelector(`[id="${errorId('root')}"]`)).toHaveTextContent('An error');
+    // The group's wrapper draws its label and description beside the errors, so they say which field the errors are for
+    expect(screen.getByRole('group', { name: 'Colors' })).toBeInTheDocument();
+    const wrapper = container.querySelector('#root');
+    expect(wrapper).toContainElement(screen.getByText('Colors'));
+    expect(wrapper).toContainElement(screen.getByText('Pick some'));
+    const errors = container.querySelectorAll(`[id="${errorId('root')}"]`);
+    expect(errors).toHaveLength(1);
+    expect(wrapper).toContainElement(errors[0] as HTMLElement);
+    expect(errors[0]).toHaveTextContent('An error');
+    expectReferencesResolve(container);
   });
 
   test('oneOf selector is described by the error Mantine renders for it', async () => {
@@ -743,6 +758,21 @@ describe('aria-describedby', () => {
 
     expect(container).toHaveTextContent('First error Second error');
     expect(container.querySelectorAll('br')).toHaveLength(1);
+    expect(consoleError).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  test('renders errors given as block elements inside its error element, without invalid nesting', () => {
+    const consoleError = vi.spyOn(console, 'error');
+    const { container } = render(
+      <MantineProvider>
+        {renderErrors('root', [createElement('div', { key: 'block' }, 'Block error')])}
+      </MantineProvider>,
+    );
+
+    const error = container.querySelector(`[id="${errorId('root')}"]`);
+    expect(error?.tagName).toBe('DIV');
+    expect(error).toContainElement(screen.getByText('Block error'));
     expect(consoleError).not.toHaveBeenCalled();
     consoleError.mockRestore();
   });

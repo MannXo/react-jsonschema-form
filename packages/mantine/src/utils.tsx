@@ -1,6 +1,13 @@
 import type { ReactElement, ReactNode } from 'react';
 import { createContext, Fragment, use, useCallback, useMemo } from 'react';
-import type { BoxProps, ElementProps, InputWrapperFactory, InputWrapperProps, StylesApiProps } from '@mantine/core';
+import type {
+  BoxProps,
+  ElementProps,
+  InputWrapperFactory,
+  InputWrapperProps,
+  MantineStyleProps,
+  StylesApiProps,
+} from '@mantine/core';
 import {
   Box,
   extractStyleProps,
@@ -221,15 +228,25 @@ export function getWidgetError<
   return errorLines(errors) ?? (hasWidgetErrors<T, S, F>(props) || undefined);
 }
 
-/** Renders errors in Mantine's error element under the field's `errorId(id)`, as this theme's widgets render theirs
+// `Input.Error` hands `component` on to the `Box` it renders, though its props don't declare it
+const blockElement = { component: 'div' };
+
+/** Renders errors in Mantine's error element under the field's `errorId(id)`, as this theme's widgets render theirs,
+ * as a `div` rather than Mantine's `p`, since `FieldErrorProps.errors` can hold elements with block content
  *
  * @param id - The id of the field
  * @param errors - The errors to render
+ * @param [errorProps] - Style props for the error element, such as the spacing a control drawn outside an
+ *   `Input.Wrapper` gives it
  * @returns - The error element, or null when there are no errors
  */
-export function renderErrors(id: string, errors: readonly ReactNode[]) {
+export function renderErrors(id: string, errors: readonly ReactNode[], errorProps?: MantineStyleProps) {
   const lines = errorLines(errors);
-  return lines ? <Input.Error id={errorId(id)}>{lines}</Input.Error> : null;
+  return lines ? (
+    <Input.Error {...errorProps} {...blockElement} id={errorId(id)}>
+      {lines}
+    </Input.Error>
+  ) : null;
 }
 
 /** Gets the own errors of an object, which its template draws, as its field's plan says, with the field's
@@ -247,13 +264,12 @@ export function getContainerErrors<
 }
 
 /** Gets the registry's `FieldErrorTemplate` for the errors a widget draws, for a widget with no Mantine error slot to
- * draw them in, such as a group with no options, so they are still drawn, under the `errorId(id)` its control is
- * described by
+ * draw them in, so they are still drawn, under the `errorId(id)` its control is described by
  *
  * @param props - The props of the widget
  * @returns - The error element, if the widget draws any errors
  */
-export function getErrorsTemplate<
+function getErrorsTemplate<
   T = unknown,
   S extends StrictRJSFSchema = RJSFSchema,
   F extends FormContextType = FormContextType,

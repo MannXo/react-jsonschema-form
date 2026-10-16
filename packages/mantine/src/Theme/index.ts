@@ -8,9 +8,9 @@ import { createWidgets } from '../widgets/index.ts';
 // declaration belongs to the widget keys, so a `BaseInputTemplate` replacing this theme's has to draw them too
 const baseInputWidgetKeys = ['TextWidget', 'EmailWidget', 'URLWidget', 'UpDownWidget'];
 
-// This theme's widgets whose field id is on no element a label's `for` can name: the slider's thumb is a `div`, and an
-// alt-date's parts each take an id of their own
-const labelledByWidgetKeys: ReadonlySet<string> = new Set(['RangeWidget', 'AltDateWidget', 'AltDateTimeWidget']);
+// This theme's widgets whose field id is on no element a label's `for` can name: the slider's thumb is a `div`.
+// `@rjsf/core` already declares its alt-date widgets so, and its declaration is layered beneath this theme's
+const labelledByWidgetKeys: ReadonlySet<string> = new Set(['RangeWidget']);
 
 /** Which parts of a field this theme's fields and widgets draw themselves, over `@rjsf/core`'s: every widget draws its
  * own label and description, the option selector of an `anyOf`/`oneOf` names and describes the field and the fallback
