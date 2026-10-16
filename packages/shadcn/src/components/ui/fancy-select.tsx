@@ -105,6 +105,12 @@ export function FancySelect({
 }: Readonly<FancySelectInterface>): ReactElement {
   const [open, setOpen] = useState(false);
   const popupId = useId();
+  // Focus stays on the combobox while cmdk highlights an option, so the combobox points at the highlighted option and at
+  // the listbox holding it by the ids cmdk gives them, which it keeps to itself. cmdk reports the option it highlights
+  // only while its value is controlled
+  const [highlighted, setHighlighted] = useState('');
+  const [highlightedId, setHighlightedId] = useState<string>();
+  const [listboxId, setListboxId] = useState<string>();
   const selectedItem = items?.find((item) => item.value === selected);
   const selectedRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -117,6 +123,45 @@ export function FancySelect({
     }
   }, [open]);
 
+  // Read on opening and as the options change too, not only as the highlight moves: the options mount afresh, under new
+  // ids, each time the listbox opens or its options change, while cmdk keeps the highlight it had and reports no change
+  const shownOptions = sections ?? items;
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!open || !container || !shownOptions?.length) {
+      return;
+    }
+    const options = [...container.querySelectorAll<HTMLElement>('[cmdk-item]')];
+    setHighlightedId(options.find((option) => option.dataset.value === highlighted)?.id);
+    setListboxId(container.querySelector<HTMLElement>('[cmdk-list]')?.id);
+  }, [open, highlighted, shownOptions]);
+
+  // The listbox opens on the option the select holds, as a native select's does, so Enter keeps the value until the
+  // highlight is moved, else on the first option a user can choose, rather than on one an earlier opening left
+  // highlighted, which cmdk keeps
+  const openList = () => {
+    const itemsInOrder = sections ? sections.flatMap((section) => section.items) : items;
+    const opening = selectedItem ?? itemsInOrder?.find((item) => !item.disabled);
+    if (opening) {
+      setHighlighted(String(opening.value));
+    }
+    setOpen(true);
+  };
+  const toggleList = () => {
+    if (open) {
+      setOpen(false);
+    } else {
+      openList();
+    }
+  };
+  const chooseHighlighted = () => {
+    const item = items?.find((candidate) => String(candidate.value) === highlighted);
+    if (item && !item.disabled) {
+      onValueChange?.(item.value);
+    }
+    setOpen(false);
+  };
+
   const handleBlur = (e: FocusEvent<HTMLDivElement>) => {
     if (containerRef.current && !containerRef.current.contains(e.relatedTarget)) {
       setOpen(false);
@@ -127,6 +172,7 @@ export function FancySelect({
   function renderItem(item: FancySelectItem) {
     return (
       <CommandItem
+        disabled={item.disabled}
         ref={item.value === selected ? selectedRef : undefined}
         key={item.value}
         value={String(item.value)}
@@ -161,11 +207,13 @@ export function FancySelect({
       aria-disabled={disabled}
       onBlur={handleBlur}
       onFocus={onFocus}
+      value={highlighted}
+      onValueChange={setHighlighted}
       aria-placeholder={ariaPlaceholder}
     >
       {/* A combobox, as a native select is, so it can be `aria-invalid`, which a button can't, and holds the item it
-          displays as its value. cmdk gives its listbox an id of its own, so the combobox controls the element the
-          listbox opens in */}
+          displays as its value. It controls the listbox while it is open, and the element the listbox opens in while
+          it is closed */}
       <button
         id={id}
         type='button'
@@ -175,22 +223,35 @@ export function FancySelect({
         autoFocus={autoFocus}
         aria-expanded={open}
         aria-haspopup='listbox'
-        aria-controls={popupId}
+        aria-controls={(open && listboxId) || popupId}
+        aria-activedescendant={open ? highlightedId : undefined}
         aria-label={ariaLabel}
         aria-labelledby={ariaLabelledby}
         aria-describedby={ariaDescribedby}
         aria-invalid={ariaInvalid || undefined}
         aria-required={required || undefined}
-        onClick={() => !disabled && setOpen(!open)}
+        onClick={() => !disabled && toggleList()}
+        // The keys of a select-only combobox, which its role leads a screen reader user to press: the arrow keys open
+        // it, Escape closes it, and Space or Enter chooses the option highlighted while it is open. The arrow keys move
+        // the highlight once it is open, which cmdk does
         onKeyDown={(e) => {
           // Enter on a highlighted option is left to cmdk, which chooses it
-          if (e.key === 'Enter' && open && highlightedId) {
+          if (disabled || (e.key === 'Enter' && open && highlightedId)) {
             return;
           }
-          if ((e.key === 'Enter' || e.key === ' ') && !disabled) {
+          const opensList = !open && (e.key === 'ArrowDown' || e.key === 'ArrowUp');
+          if (opensList || e.key === 'Enter' || e.key === ' ' || (open && e.key === 'Escape')) {
             e.preventDefault();
             e.stopPropagation();
-            setOpen(!open);
+          }
+          if (opensList) {
+            openList();
+          } else if (e.key === ' ' && open) {
+            chooseHighlighted();
+          } else if (e.key === 'Enter' || e.key === ' ') {
+            toggleList();
+          } else if (open && e.key === 'Escape') {
+            setOpen(false);
           }
         }}
         className={cn(
