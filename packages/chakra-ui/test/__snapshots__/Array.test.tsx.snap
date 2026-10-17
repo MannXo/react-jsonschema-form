@@ -1509,6 +1509,7 @@ exports[`array fields > checkboxes 1`] = `
                   aria-expanded="false"
                   aria-haspopup="listbox"
                   aria-invalid="false"
+                  aria-label="Select ..."
                   aria-labelledby=""
                   aria-required="false"
                   class="chakra-select__trigger emotion-5"
@@ -5311,6 +5312,7 @@ exports[`nameGenerator > bracketNameGenerator > checkboxes with nameGenerator 1`
                   aria-expanded="false"
                   aria-haspopup="listbox"
                   aria-invalid="false"
+                  aria-label="Select ..."
                   aria-labelledby=""
                   aria-required="false"
                   class="chakra-select__trigger emotion-5"
@@ -11541,7 +11543,6 @@ exports[`with title and description > checkboxes 1`] = `
               class="chakra-field__label emotion-5"
               data-part="label"
               data-scope="field"
-              for="root"
               id="root__label"
             >
               Test field
@@ -14019,7 +14020,6 @@ exports[`with title and description from both > checkboxes 1`] = `
               class="chakra-field__label emotion-5"
               data-part="label"
               data-scope="field"
-              for="root"
               id="root__label"
             >
               My Field
@@ -16497,7 +16497,6 @@ exports[`with title and description from uiSchema > checkboxes 1`] = `
               class="chakra-field__label emotion-5"
               data-part="label"
               data-scope="field"
-              for="root"
               id="root__label"
             >
               My Field

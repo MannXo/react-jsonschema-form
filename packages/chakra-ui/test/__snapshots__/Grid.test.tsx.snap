@@ -1204,19 +1204,17 @@ exports[`Complex grid > renders person and address and employment in a complex g
                       class="fieldset__content emotion-1"
                     >
                       <fieldset
-                        aria-labelledby="root_person_race__label"
+                        aria-labelledby=""
                         class="fieldset__root emotion-39"
                         data-part="root"
                         data-scope="fieldset"
                       >
-                        <legend
+                        <div
                           class="fieldset__legend emotion-40"
-                          data-part="legend"
-                          data-scope="fieldset"
                           id="root_person_race__label"
                         >
                           Race
-                        </legend>
+                        </div>
                         <div
                           aria-labelledby="root_person_race__label"
                           class="emotion-41"
@@ -1673,7 +1671,6 @@ exports[`Complex grid > renders person and address and employment in a complex g
                                     data-part="label"
                                     data-required=""
                                     data-scope="field"
-                                    for="root_person_address_state"
                                     id="root_person_address_state__label"
                                   >
                                     State
@@ -4182,7 +4179,6 @@ exports[`Complex grid > renders person and address and employment in a complex g
                               data-part="label"
                               data-required=""
                               data-scope="field"
-                              for="root_employment_location_state"
                               id="root_employment_location_state__label"
                             >
                               State
@@ -7483,19 +7479,17 @@ exports[`Complex grid > renders person and address and employment in a complex g
                       class="fieldset__content emotion-1"
                     >
                       <fieldset
-                        aria-labelledby="root_person_race__label"
+                        aria-labelledby=""
                         class="fieldset__root emotion-39"
                         data-part="root"
                         data-scope="fieldset"
                       >
-                        <legend
+                        <div
                           class="fieldset__legend emotion-40"
-                          data-part="legend"
-                          data-scope="fieldset"
                           id="root_person_race__label"
                         >
                           Race
-                        </legend>
+                        </div>
                         <div
                           aria-labelledby="root_person_race__label"
                           class="emotion-41"
@@ -7952,7 +7946,6 @@ exports[`Complex grid > renders person and address and employment in a complex g
                                     data-part="label"
                                     data-required=""
                                     data-scope="field"
-                                    for="root_person_address_state"
                                     id="root_person_address_state__label"
                                   >
                                     State
@@ -10507,7 +10500,6 @@ exports[`Complex grid > renders person and address and employment in a complex g
                               data-part="label"
                               data-required=""
                               data-scope="field"
-                              for="root_employment_location_state"
                               id="root_employment_location_state__label"
                             >
                               State
@@ -13853,19 +13845,17 @@ exports[`Complex grid > renders person and address and employment in a complex g
                       class="fieldset__content emotion-1"
                     >
                       <fieldset
-                        aria-labelledby="root_person_race__label"
+                        aria-labelledby=""
                         class="fieldset__root emotion-39"
                         data-part="root"
                         data-scope="fieldset"
                       >
-                        <legend
+                        <div
                           class="fieldset__legend emotion-40"
-                          data-part="legend"
-                          data-scope="fieldset"
                           id="root_person_race__label"
                         >
                           Race
-                        </legend>
+                        </div>
                         <div
                           aria-labelledby="root_person_race__label"
                           class="emotion-41"
@@ -14322,7 +14312,6 @@ exports[`Complex grid > renders person and address and employment in a complex g
                                     data-part="label"
                                     data-required=""
                                     data-scope="field"
-                                    for="root_person_address_state"
                                     id="root_person_address_state__label"
                                   >
                                     State
@@ -17932,19 +17921,17 @@ exports[`Complex grid > renders person and address and employment in a complex g
                       class="fieldset__content emotion-1"
                     >
                       <fieldset
-                        aria-labelledby="root_person_race__label"
+                        aria-labelledby=""
                         class="fieldset__root emotion-39"
                         data-part="root"
                         data-scope="fieldset"
                       >
-                        <legend
+                        <div
                           class="fieldset__legend emotion-40"
-                          data-part="legend"
-                          data-scope="fieldset"
                           id="root_person_race__label"
                         >
                           Race
-                        </legend>
+                        </div>
                         <div
                           aria-labelledby="root_person_race__label"
                           class="emotion-41"
@@ -18401,7 +18388,6 @@ exports[`Complex grid > renders person and address and employment in a complex g
                                     data-part="label"
                                     data-required=""
                                     data-scope="field"
-                                    for="root_person_address_state"
                                     id="root_person_address_state__label"
                                   >
                                     State
@@ -20910,7 +20896,6 @@ exports[`Complex grid > renders person and address and employment in a complex g
                               data-part="label"
                               data-required=""
                               data-scope="field"
-                              for="root_employment_location_state"
                               id="root_employment_location_state__label"
                             >
                               State
@@ -24061,19 +24046,17 @@ exports[`Three even column grid > renders person and address in three columns, n
                     class="fieldset__content emotion-1"
                   >
                     <fieldset
-                      aria-labelledby="root_person_race__label"
+                      aria-labelledby=""
                       class="fieldset__root emotion-35"
                       data-part="root"
                       data-scope="fieldset"
                     >
-                      <legend
+                      <div
                         class="fieldset__legend emotion-36"
-                        data-part="legend"
-                        data-scope="fieldset"
                         id="root_person_race__label"
                       >
                         Race
-                      </legend>
+                      </div>
                       <div
                         aria-labelledby="root_person_race__label"
                         class="emotion-37"
@@ -24502,7 +24485,6 @@ exports[`Three even column grid > renders person and address in three columns, n
                         data-part="label"
                         data-required=""
                         data-scope="field"
-                        for="root_person_address_state"
                         id="root_person_address_state__label"
                       >
                         State
@@ -27651,19 +27633,17 @@ exports[`Two even column grid > renders person and address in two columns, no em
                     class="fieldset__content emotion-1"
                   >
                     <fieldset
-                      aria-labelledby="root_person_race__label"
+                      aria-labelledby=""
                       class="fieldset__root emotion-35"
                       data-part="root"
                       data-scope="fieldset"
                     >
-                      <legend
+                      <div
                         class="fieldset__legend emotion-36"
-                        data-part="legend"
-                        data-scope="fieldset"
                         id="root_person_race__label"
                       >
                         Race
-                      </legend>
+                      </div>
                       <div
                         aria-labelledby="root_person_race__label"
                         class="emotion-37"
@@ -28092,7 +28072,6 @@ exports[`Two even column grid > renders person and address in two columns, no em
                         data-part="label"
                         data-required=""
                         data-scope="field"
-                        for="root_person_address_state"
                         id="root_person_address_state__label"
                       >
                         State

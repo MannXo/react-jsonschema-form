@@ -91,6 +91,23 @@ describe('chakra-ui AltDateWidget', () => {
 });
 
 describe('chakra-ui SelectWidget', () => {
+  test('focuses the trigger on a click on its label, as a select label does, without opening the listbox', async () => {
+    render(
+      <WrappedForm
+        schema={{ type: 'object', properties: { s: { type: 'string', title: 'S', enum: ['a', 'b'] } } }}
+        validator={validator}
+      />,
+    );
+
+    const label = screen.getByText('S');
+    expect(label).not.toHaveAttribute('for');
+    await user.click(label);
+
+    const trigger = screen.getByRole('combobox', { name: 'S' });
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  });
+
   // The listbox is closed, so it is queried among hidden elements; the trigger isn't, past Ark's hidden native select
   test.each([
     ['trigger', 'combobox', false],
@@ -220,6 +237,18 @@ describe("chakra-ui widgets carry their field's plan on the element a user focus
     expect(control).toHaveAttribute('aria-describedby', 'root_pet__error');
     expect(control).toHaveAccessibleDescription('too short');
     expectReferencesResolve(container);
+  });
+
+  test('a checkbox with errors is styled invalid, as the other controls are', () => {
+    const { container } = render(
+      <WrappedForm
+        schema={{ type: 'object', properties: { b: { type: 'boolean', title: 'B' } } }}
+        extraErrors={{ b: { __errors: ['bad'] } }}
+        validator={validator}
+      />,
+    );
+
+    expect(container.querySelector('.chakra-checkbox__control')).toHaveAttribute('data-invalid');
   });
 
   test('focuses the slider thumb under ui:autofocus, as core focuses its range input', () => {
@@ -452,6 +481,22 @@ describe('chakra-ui CheckboxesWidget', () => {
     expectReferencesResolve(container);
     expect(container.querySelector('#root_y')).toHaveAccessibleName('Y');
   });
+
+  test('names its group once, by the label it draws, and leaves the fieldset around it unnamed', () => {
+    const { container } = render(
+      <WrappedForm
+        schema={{ type: 'array', title: 'Colors', items: { type: 'string', enum: ['a', 'b'] }, uniqueItems: true }}
+        uiSchema={{ 'ui:widget': 'checkboxes' }}
+        validator={validator}
+      />,
+    );
+
+    expect(screen.getByRole('group', { name: 'Colors' })).toHaveAttribute('id', 'root');
+    expect(container.querySelector('legend')).toBeNull();
+    for (const fieldset of container.querySelectorAll('fieldset')) {
+      expect(fieldset).toHaveAccessibleName('');
+    }
+  });
 });
 
 describe('chakra-ui RadioWidget', () => {
@@ -584,7 +629,7 @@ describe('chakra-ui FieldTemplate', () => {
     expect(container.querySelector('#root_foo__label')).toHaveAttribute('data-disabled');
   });
 
-  test("points each field's fieldset at the label the template draws, or at nothing", () => {
+  test("points no field's fieldset at the label the template draws, which names the control inside it", () => {
     const { container } = render(
       <WrappedForm
         schema={{ type: 'object', properties: { foo: { type: 'string', title: 'Foo' } } }}
@@ -594,8 +639,22 @@ describe('chakra-ui FieldTemplate', () => {
     );
 
     const fieldsets = [...container.querySelectorAll('fieldset')];
-    expect(fieldsets.map((fieldset) => fieldset.getAttribute('aria-labelledby'))).toEqual(['', 'root_foo__label']);
-    expect(screen.getByRole('group', { name: 'Foo' })).toBe(fieldsets[1]);
+    expect(fieldsets.map((fieldset) => fieldset.getAttribute('aria-labelledby'))).toEqual(['', '']);
+    expect(screen.getByRole('textbox')).toHaveAccessibleName('Foo');
+    expect(screen.queryByRole('group', { name: 'Foo' })).toBeNull();
+  });
+
+  test("names a rating's radiogroup by the template's label once, with no fieldset of the same name around it", () => {
+    render(
+      <WrappedForm
+        schema={{ type: 'object', properties: { score: { type: 'integer', title: 'Score', maximum: 3 } } }}
+        uiSchema={{ score: { 'ui:widget': 'RatingWidget' } }}
+        validator={validator}
+      />,
+    );
+
+    expect(screen.getByRole('radiogroup')).toHaveAccessibleName('Score');
+    expect(screen.queryByRole('group', { name: 'Score' })).toBeNull();
   });
 
   test('draws no label for a widget that draws its own', () => {
