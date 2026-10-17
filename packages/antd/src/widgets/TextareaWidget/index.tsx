@@ -27,6 +27,7 @@ export default function TextareaWidget<
   options,
   placeholder,
   readonly,
+  required,
   value,
 }: WidgetProps<T, S, F>) {
   const { formContext } = registry;
@@ -54,6 +55,7 @@ export default function TextareaWidget<
       onChange={!readonly ? handleChange : undefined}
       onFocus={!readonly ? handleFocus : undefined}
       placeholder={placeholder}
+      required={required}
       rows={options.rows ?? 4}
       style={INPUT_STYLE}
       value={value}
