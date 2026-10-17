@@ -284,6 +284,21 @@ describe("fluentui-rc widgets are named by their label and carry the field's id 
   });
 });
 
+describe('fluentui-rc WrapIfAdditionalTemplate', () => {
+  test("names the additional property key's input by its label where ui:label: false hides it", () => {
+    render(
+      <Form
+        schema={{ type: 'object', additionalProperties: { type: 'string' } }}
+        uiSchema={{ additionalProperties: { 'ui:label': false } }}
+        formData={{ first: 'a' }}
+        validator={validator}
+      />,
+    );
+
+    expect(screen.getByRole('textbox', { name: 'first Key' })).toHaveAttribute('id', 'root_first-key');
+  });
+});
+
 describe('fluentui-rc CheckboxWidget', () => {
   test('draws no label of its own where ui:label turns it off', () => {
     render(
@@ -596,5 +611,31 @@ describe("fluentui-rc draws a select's own label under the id its plan gives it"
 
     expect(container.querySelector('#root_pet__label')).toHaveAttribute('for', 'root_pet__anyof_select');
     expect(screen.getByRole('combobox')).toHaveAccessibleName('Pet');
+  });
+
+  // Both option selectors carry the id `root_pet__anyof_select`, so a label's `for` alone would name the outer one twice
+  test("names a nested anyOf's option selectors each by its own label", () => {
+    const { container } = render(
+      <Form
+        schema={{
+          type: 'object',
+          properties: {
+            pet: {
+              title: 'Pet',
+              anyOf: [
+                { title: 'Inner', anyOf: [{ type: 'string', title: 'S', enum: ['a'] }, { type: 'number' }] },
+                { type: 'number' },
+              ],
+            },
+          },
+        }}
+        validator={validator}
+      />,
+    );
+
+    const [outer, inner] = screen.getAllByRole('combobox');
+    expect(outer).toHaveAccessibleName('Pet');
+    expect(inner).toHaveAccessibleName('Inner');
+    expectReferencesResolve(container);
   });
 });
