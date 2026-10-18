@@ -262,6 +262,88 @@ describe('SelectWidget', () => {
     expect(combobox).toHaveAttribute('aria-expanded', 'false');
   });
 
+  test.each<[string, string | undefined, string]>([
+    ['{ArrowDown}', 'baz', 'Baz'],
+    ['{ArrowDown}', undefined, 'Foo'],
+    ['{Alt>}{ArrowDown}{/Alt}', undefined, 'Foo'],
+    ['{ArrowUp}', undefined, 'Qux'],
+  ])(
+    'opens on %s and moves into the selected option, else the first or last (value: %s)',
+    async (keys, value, name) => {
+      render(<SelectWidget {...makeWidgetMockProps({ options: { enumOptions }, autofocus: false, value })} />);
+
+      await user.click(screen.getByRole('combobox'));
+      await user.keyboard(keys);
+
+      expect(screen.getByRole('option', { name })).toHaveFocus();
+    },
+  );
+
+  test('moves between the options a user can reach with the arrow keys, Home and End', async () => {
+    render(
+      <SelectWidget
+        {...makeWidgetMockProps({
+          options: { enumOptions, enumDisabled: ['bar'] },
+          autofocus: false,
+          value: undefined,
+        })}
+      />,
+    );
+
+    await user.click(screen.getByRole('combobox'));
+    await user.keyboard('{ArrowDown}{ArrowDown}');
+    expect(screen.getByRole('option', { name: 'Baz' })).toHaveFocus();
+
+    await user.keyboard('{ArrowUp}');
+    expect(screen.getByRole('option', { name: 'Foo' })).toHaveFocus();
+
+    await user.keyboard('{End}');
+    expect(screen.getByRole('option', { name: 'Qux' })).toHaveFocus();
+
+    await user.keyboard('{Home}');
+    expect(screen.getByRole('option', { name: 'Foo' })).toHaveFocus();
+  });
+
+  test('closes on Escape, returning focus to its trigger, and opens again on Down Arrow', async () => {
+    render(<SelectWidget {...makeWidgetMockProps({ options: { enumOptions }, autofocus: false, value: undefined })} />);
+    const combobox = screen.getByRole('combobox');
+
+    await user.click(combobox);
+    await user.keyboard('{ArrowDown}{Escape}');
+    expect(combobox).toHaveFocus();
+    expect(combobox).toHaveAttribute('aria-expanded', 'false');
+
+    await user.keyboard('{ArrowDown}');
+    expect(combobox).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('option', { name: 'Foo' })).toHaveFocus();
+  });
+
+  test('holds no value while nothing is selected and no placeholder shows, though its label is on screen', () => {
+    render(
+      <Form
+        schema={{ type: 'object', properties: { color: { type: 'string', title: 'Color', enum: ['red', 'blue'] } } }}
+        validator={validator}
+      />,
+    );
+    const combobox = screen.getByRole('combobox', { name: 'Color' });
+
+    expect(within(combobox).getByText('Color')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  test('holds its placeholder as its value while nothing is selected', () => {
+    render(
+      <Form
+        schema={{ type: 'object', properties: { color: { type: 'string', title: 'Color', enum: ['red', 'blue'] } } }}
+        uiSchema={{ color: { 'ui:placeholder': 'Pick one' } }}
+        validator={validator}
+      />,
+    );
+
+    expect(within(screen.getByRole('combobox', { name: 'Color' })).getByText('Pick one')).not.toHaveAttribute(
+      'aria-hidden',
+    );
+  });
+
   test.each([
     [true, 'true'],
     [false, null],
@@ -283,6 +365,16 @@ describe('SelectWidget', () => {
 
     expect(screen.queryByText('Color', { selector: 'label *' })).not.toBeInTheDocument();
     expect(screen.getByRole('combobox')).toHaveAccessibleName('Color');
+  });
+
+  test('falls back to its placeholder for an empty aria-label, which names nothing', () => {
+    render(
+      <SelectWidget
+        {...makeWidgetMockProps({ options: { enumOptions }, label: '', placeholder: 'Pick one', 'aria-label': '' })}
+      />,
+    );
+
+    expect(screen.getByRole('combobox')).toHaveAccessibleName('Pick one');
   });
 
   test.each<[string, RJSFSchema, unknown]>([

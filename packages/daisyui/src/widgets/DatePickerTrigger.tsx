@@ -1,4 +1,4 @@
-import type { MouseEvent, ReactNode, RefObject } from 'react';
+import type { KeyboardEvent, ReactNode, RefObject, SyntheticEvent } from 'react';
 import { faCalendar } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FieldPresentation, FormContextType, Registry, RJSFSchema, StrictRJSFSchema } from '@rjsf/utils';
@@ -52,8 +52,8 @@ interface DatePickerTriggerProps {
   autofocus?: boolean;
   /** The ref the popup positions itself against and returns focus to */
   triggerRef: RefObject<HTMLButtonElement | null>;
-  /** Opens the popup, or closes it where a press here is the way out */
-  onClick: (e: MouseEvent) => void;
+  /** Opens the popup, or closes it where a press here is the way out; Down Arrow opens it too */
+  onClick: (e: SyntheticEvent) => void;
   /** Reports focus */
   onFocus: () => void;
   /** Reports blur */
@@ -95,6 +95,14 @@ export default function DatePickerTrigger<
 }: DatePickerTriggerProps) {
   const controlAttributes = getControlAttributes<T, S, F>({ id, presentation });
   const text = formattedValue || placeholder || fallbackName;
+  // A combobox opens on Down Arrow, or Alt+Down Arrow, as well as on a press, which is the key a user who hears one
+  // reaches for
+  const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === 'ArrowDown' && !isOpen && !readonly) {
+      event.preventDefault();
+      onClick(event);
+    }
+  };
 
   return (
     <button
@@ -109,6 +117,7 @@ export default function DatePickerTrigger<
       // a field that cannot be edited is still one a keyboard user reads, and `SelectWidget` keeps its own reachable
       aria-disabled={readonly || undefined}
       onClick={readonly ? undefined : onClick}
+      onKeyDown={handleKeyDown}
       onFocus={onFocus}
       onBlur={onBlur}
       role='combobox'
@@ -120,7 +129,15 @@ export default function DatePickerTrigger<
       {...controlAttributes}
       ref={triggerRef}
     >
-      <span className={formattedValue ? '' : 'text-base-content/50'}>{text}</span>
+      {/* With no date and no placeholder the text is the field's label, or the translated prompt, which on screen stands
+          in for a value but is no value, so it is hidden from the one the combobox holds, leaving that empty as a
+          native date input's is */}
+      <span
+        className={formattedValue ? '' : 'text-base-content/50'}
+        aria-hidden={(!formattedValue && !placeholder) || undefined}
+      >
+        {text}
+      </span>
       <FontAwesomeIcon icon={faCalendar} className='ml-2 h-4 w-4 text-primary' />
     </button>
   );

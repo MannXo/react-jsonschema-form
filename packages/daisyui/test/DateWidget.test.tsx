@@ -1,6 +1,6 @@
 import { englishStringTranslator, TranslatableString } from '@rjsf/utils';
 import validator from '@rjsf/validator-ajv8';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 
 import Form from '../src/index.ts';
@@ -438,6 +438,37 @@ describe('DateWidget', () => {
       render(<Form schema={dateSchema} validator={validator} />);
 
       expect(screen.getByRole('combobox', { name: 'Birthday' })).toHaveAccessibleName('Birthday');
+    });
+
+    // On screen the label stands in for the date it doesn't hold, which is no value
+    test('holds no value while no date is selected and no placeholder shows', () => {
+      render(<Form schema={dateSchema} validator={validator} />);
+
+      const trigger = screen.getByRole('combobox', { name: 'Birthday' });
+      expect(within(trigger).getByText('Birthday')).toHaveAttribute('aria-hidden', 'true');
+    });
+
+    test.each(['{ArrowDown}', '{Alt>}{ArrowDown}{/Alt}'])(
+      'opens its picker on %s, as a combobox does',
+      async (keys) => {
+        render(<Form schema={dateSchema} validator={validator} />);
+
+        await user.tab();
+        await user.keyboard(keys);
+
+        expect(screen.getByRole('combobox', { name: 'Birthday' })).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.getByRole('dialog', { name: 'Birthday' })).toBeInTheDocument();
+      },
+    );
+
+    test('opens no picker on Down Arrow where the field is read-only', async () => {
+      render(<Form schema={dateSchema} uiSchema={{ birthday: { 'ui:readonly': true } }} validator={validator} />);
+
+      await user.tab();
+      await user.keyboard('{ArrowDown}');
+
+      expect(screen.getByRole('combobox', { name: 'Birthday' })).toHaveAttribute('aria-expanded', 'false');
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
     // The label names the combobox through `htmlFor`, and the day it displays is its value

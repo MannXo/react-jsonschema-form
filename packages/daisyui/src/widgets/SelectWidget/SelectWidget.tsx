@@ -1,5 +1,5 @@
-import type { FocusEvent } from 'react';
-import { useCallback, useMemo, useState } from 'react';
+import type { FocusEvent, KeyboardEvent } from 'react';
+import { useCallback, useId, useMemo, useRef, useState } from 'react';
 import type {
   EnumOptionsType,
   FormContextType,
@@ -15,16 +15,58 @@ import {
   enumOptionsIsSelected,
   enumOptionsSelectValue,
   enumOptionsValueForIndex,
+  getControlAriaLabel,
   getControlFallbackName,
   groupEnumOptions,
   isEnumOptionsGroup,
-  isNamedByTemplateLabel,
   logUnsupportedDefaultForEnum,
   SelectedOptionDescription,
   useSelectFocusHandlers,
   widgetAriaProps,
   widgetDrawsLabel,
 } from '@rjsf/utils';
+
+/** The options a user moves between with the arrow keys: every one but those `ui:enumDisabled` takes out of the tab
+ * order, as a disabled or readonly field's options stay reachable so its value stays readable
+ */
+const REACHABLE_OPTION = '[role="option"]:not([tabindex="-1"])';
+
+/** The option an arrow key, Home or End moves to from the one holding focus, or for the trigger, which Down and Up
+ * Arrow open the listbox from, the selected option, else the first one (Down) or the last (Up)
+ *
+ * @param listbox - The listbox
+ * @param from - The element the key was pressed on, the trigger or an option
+ * @param key - The key pressed
+ * @returns - The option to focus, or `undefined` where the key moves nowhere
+ */
+function optionToFocus(listbox: HTMLElement, from: EventTarget, key: string) {
+  const reachable = Array.from(listbox.querySelectorAll<HTMLElement>(REACHABLE_OPTION));
+  const first = reachable[0];
+  const last = reachable[reachable.length - 1];
+  const current = reachable.indexOf(from as HTMLElement);
+  if (current === -1) {
+    const selected = listbox.querySelector<HTMLElement>(`${REACHABLE_OPTION}[aria-selected="true"]`);
+    if (key === 'ArrowDown') {
+      return selected ?? first;
+    }
+    if (key === 'ArrowUp') {
+      return selected ?? last;
+    }
+    return undefined;
+  }
+  switch (key) {
+    case 'ArrowDown':
+      return reachable[Math.min(current + 1, reachable.length - 1)];
+    case 'ArrowUp':
+      return reachable[Math.max(current - 1, 0)];
+    case 'Home':
+      return first;
+    case 'End':
+      return last;
+    default:
+      return undefined;
+  }
+}
 
 function getDisplayValue(val: unknown) {
   if (val === undefined || val === null) {
@@ -125,14 +167,19 @@ export default function SelectWidget<
     onBlur,
   });
 
-  // The dropdown opens while focus is inside it, so its trigger is expanded exactly then
+  // The dropdown opens while focus is inside it, so its trigger is expanded exactly then, unless Escape dismissed it,
+  // which leaves focus on the trigger and so closes the dropdown through `dropdown-close` rather than by moving focus
   const [expanded, setExpanded] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const listboxRef = useRef<HTMLUListElement>(null);
   // Focus moves between the button and the options while the dropdown is in use, so only entering or leaving the
   // dropdown as a whole counts as focusing or blurring the widget, which reports the current selection
   const handleBlur = useCallback(
     ({ currentTarget, relatedTarget }: FocusEvent<HTMLDivElement>) => {
       if (!currentTarget.contains(relatedTarget)) {
         setExpanded(false);
+        setDismissed(false);
         reportBlur();
       }
     },
@@ -149,17 +196,43 @@ export default function SelectWidget<
     [reportFocus],
   );
 
+  // The keys the combobox role promises: Down and Up Arrow open the listbox and move into it, the arrows, Home and End
+  // move between its options, and Escape closes it, returning focus to the trigger. Enter and Space stay with the
+  // trigger's own press and each option's handler
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLElement>) => {
+      const { key, target } = event;
+      if (key === 'Escape') {
+        if (expanded && !dismissed) {
+          event.preventDefault();
+          setDismissed(true);
+          triggerRef.current?.focus();
+        }
+        return;
+      }
+      const option = listboxRef.current ? optionToFocus(listboxRef.current, target, key) : undefined;
+      if (option) {
+        event.preventDefault();
+        setDismissed(false);
+        option.focus();
+      }
+    },
+    [expanded, dismissed],
+  );
+
   logUnsupportedDefaultForEnum<S>(id, schema, enumOptions, isMultiple);
   const selectedIndexes = [enumOptionsIndexForValue<S>(value, optionsList, isMultiple) ?? []].flat();
   const selectedLabels = selectedIndexes.map((index) => optionsList[Number(index)].label);
   const hasValue = selectedLabels.length > 0;
   const ariaProps = widgetAriaProps(props);
-  const listboxId = `${id}__listbox`;
+  // Generated rather than built from the field's id, which no suffix keeps clear of another field's: a property named
+  // `_listbox` beside a root select would share it
+  const listboxId = useId();
   // A combobox takes no name from its contents, which are its value, so with no label or `aria-label` naming it, it is
   // named by the field's label, as the label drawn for it would, or, for a field with no title, such as an array item
-  // or an untitled option selector, by its placeholder, else the translated prompt, as `DatePickerTrigger` is. The plan
-  // points it at a label through `aria-labelledby` only where `isNamedByTemplateLabel()` already reports one
-  const named = isNamedByTemplateLabel<T, S, F>(props);
+  // or an untitled option selector, by its placeholder, else the translated prompt, as `DatePickerTrigger` is, by the rule
+  // `getControlAriaLabel()` gives every theme's select. The plan points it at a label through `aria-labelledby` only where
+  // `isNamedByTemplateLabel()` already reports one
   const fallbackName = getControlFallbackName<T, S, F>({ label, placeholder, registry });
 
   function renderOption(option: IndexedEnumOptionType<S>) {
@@ -195,7 +268,7 @@ export default function SelectWidget<
 
   return (
     <div className='form-control w-full'>
-      <div className='dropdown w-full' onBlur={handleBlur} onFocus={handleFocus}>
+      <div className={`dropdown w-full${dismissed ? ' dropdown-close' : ''}`} onBlur={handleBlur} onFocus={handleFocus}>
         {/* A real `button` rather than the `div role='button'` daisyui's own markup uses: `label htmlFor` only
             associates with a labelable element, so on a `div` the key label and the `FieldTemplate` label both point
             at nothing. `type='button'` keeps it from submitting the form it sits in, and the explicit focus covers
@@ -205,6 +278,7 @@ export default function SelectWidget<
             it clears focus when the element it hits is not mouse-focusable, which is exactly what a button is there. */}
         <button
           id={id}
+          ref={triggerRef}
           type='button'
           tabIndex={0}
           // Disabled only through `aria-disabled`, so it would still take focus and open its listbox on mount, which a
@@ -214,6 +288,8 @@ export default function SelectWidget<
             event.preventDefault();
             event.currentTarget.focus();
           }}
+          onClick={() => setDismissed(false)}
+          onKeyDown={handleKeyDown}
           className={`btn btn-outline w-full text-left flex justify-between items-center ${
             disabled || readonly ? 'btn-disabled' : ''
           }`}
@@ -221,15 +297,20 @@ export default function SelectWidget<
              and announces the option it displays as its value */
           role='combobox'
           aria-haspopup='listbox'
-          aria-expanded={expanded}
+          aria-expanded={expanded && !dismissed}
           aria-controls={listboxId}
           {...ariaProps}
-          aria-label={ariaProps['aria-label'] ?? (named ? undefined : fallbackName)}
+          aria-label={getControlAriaLabel<T, S, F>(props, ariaProps['aria-label'])}
           aria-disabled={disabled || readonly || undefined}
           // A button takes no `required`, so the combobox says it as a native select's attribute would
           aria-required={required || undefined}
         >
-          <span className='truncate'>{hasValue ? selectedLabels.join(', ') : placeholder || fallbackName}</span>
+          {/* With no option selected and no placeholder the text is the field's label, or the translated prompt, which on
+              screen stands in for a value but is no value, so it is hidden from the one the combobox holds, leaving
+              that empty as a native select's empty option does */}
+          <span className='truncate' aria-hidden={(!hasValue && !placeholder) || undefined}>
+            {hasValue ? selectedLabels.join(', ') : placeholder || fallbackName}
+          </span>
           {/* Decoration, and hidden from the value the combobox's contents give it, which would otherwise end in the
               glyph's own spoken name */}
           <span aria-hidden className='ml-2'>
@@ -238,6 +319,9 @@ export default function SelectWidget<
         </button>
         <ul
           id={listboxId}
+          ref={listboxRef}
+          // Its options' keys bubble here, so one handler moves between them
+          onKeyDown={handleKeyDown}
           // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-to-interactive-role
           role='listbox'
           aria-multiselectable={isMultiple || undefined}
