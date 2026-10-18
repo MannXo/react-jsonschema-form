@@ -348,6 +348,22 @@ describe('the plan SchemaField builds', () => {
       const heading = node.querySelector(`#${titleId('root_pets')}`)!;
       expect(heading.compareDocumentPosition(descriptions[0])).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     });
+
+    it.each([
+      ['an array', arrays],
+      ['an object', objects],
+    ])('hands %s its description where the field declares it draws its own label and description', (_, anyOf) => {
+      const { node } = createFormComponent({
+        schema: { type: 'object', properties: { pets: { title: 'Pets', description: 'Some pets', anyOf } } },
+        uiSchema: optional,
+        presentation: { fields: { AnyOfField: { label: 'self', description: 'self' } } },
+      });
+
+      const descriptions = screen.getAllByText('Some pets');
+      expect(descriptions).toHaveLength(1);
+      const heading = node.querySelector(`#${titleId('root_pets')}`)!;
+      expect(heading.compareDocumentPosition(descriptions[0])).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    });
   });
 
   describe('an untitled anyOf option beneath a field whose own component draws its label', () => {

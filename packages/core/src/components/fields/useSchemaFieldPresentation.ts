@@ -191,9 +191,10 @@ export default function useSchemaFieldPresentation<
       return declared;
     }
     // The field rendering the options draws its label only through its selector, so with the selector withheld, as for
-    // an opted-out optional field, there is no label of its own, and the field below keeps the heading it draws
+    // an opted-out optional field, there is no label of its own, and the field below keeps the heading it draws. Its
+    // description is the template's too, whatever the field declares, so it is handed to the option below with the label
     if (hidden) {
-      return { ...declared, label: 'template' as const };
+      return { ...declared, label: 'template' as const, description: 'template' as const };
     }
     // Options that render no control leave a `for` at the field's id naming nothing, so the label names the selector
     // through `aria-labelledby` alone
