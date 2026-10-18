@@ -7,6 +7,7 @@ import isObject from '../isObject.ts';
 import isPlainObject from '../isPlainObject.ts';
 import isWholeValueSelect from '../isWholeValueSelect.ts';
 import { getByPath, hasByPath } from '../pathUtils.ts';
+import setOwn from '../setOwn.ts';
 import type { FormContextType, GenericObjectType, RJSFSchema, SchemaContext, StrictRJSFSchema } from '../types.ts';
 import retrieveSchema from './retrieveSchema.ts';
 
@@ -292,7 +293,7 @@ function sanitizeDataForNewSchemaInternal<
     if (oldProperties) {
       Object.keys(oldProperties).forEach((key) => {
         if (hasByPath(data, key)) {
-          removeOldSchemaData[key] = undefined;
+          setOwn(removeOldSchemaData, key, undefined);
         }
       });
     }
@@ -300,7 +301,9 @@ function sanitizeDataForNewSchemaInternal<
     // Create a place to store nested data that will be a side-effect of the filter
     const nestedData: GenericObjectType = {};
     keys.forEach((key) => {
-      const formValue = data?.[key];
+      // Data and schemas are read and written by own key, so a key named like an `Object.prototype` member, such as
+      // `toString`, isn't read as the inherited member, and a `__proto__` key isn't written through the prototype setter
+      const formValue = getByPath<T>(data, key);
       const isNewProperty = !hasByPath(oldSchema, [PROPERTIES_KEY, key]);
       const oldRawKeyedSchema = getPropertySchema<S>(oldSchema, key);
       const newRawKeyedSchema = getPropertySchema<S>(newSchema, key);
@@ -326,7 +329,7 @@ function sanitizeDataForNewSchemaInternal<
       const newSchemaTypeForKey = newKeyedSchema.type;
       // Check if the old option has the same key with the same type
       if (!oldSchemaTypeForKey || isSameType(oldSchemaTypeForKey, newSchemaTypeForKey)) {
-        if (key in removeOldSchemaData) {
+        if (Object.hasOwn(removeOldSchemaData, key)) {
           // SIDE-EFFECT: remove the undefined value for a key that has the same type between the old and new schemas
           delete removeOldSchemaData[key];
         }
@@ -354,18 +357,18 @@ function sanitizeDataForNewSchemaInternal<
             newKeyedSchema,
             borrowOld ? newKeyedSchema : oldKeyedSchema,
             formValue,
-            oldData?.[key],
+            getByPath(oldData, key),
             borrowOld || oldSchemaPrevRawForFrame === undefined
               ? undefined
               : () => getPropertySchema<S>(resolveOldSchemaPrev(), key),
             undefined,
             // A key the view holds nothing for pairs with no previous value rather than falling back to
             // `oldData`, which would pair by index what the view declined to describe
-            pairingData?.[key] === undefined ? NO_PREVIOUS_VALUE : pairingData[key],
+            getByPath(pairingData, key, NO_PREVIOUS_VALUE),
           );
           if (itemData !== undefined || isArrayValue) {
             // only put undefined values for the array type and not the object type
-            nestedData[key] = itemData;
+            setOwn(nestedData, key, itemData);
           }
         } else {
           // Ok, the non-object types match, let's make sure that a default or a const of a different value is replaced
@@ -376,10 +379,10 @@ function sanitizeDataForNewSchemaInternal<
           if (newOptionDefault !== NO_VALUE && !deepEquals(newOptionDefault, formValue)) {
             if ((isNewProperty && formValue === undefined) || deepEquals(oldOptionDefault, formValue)) {
               // Initialize a newly entered property or replace an old default with the new default.
-              removeOldSchemaData[key] = newOptionDefault;
+              setOwn(removeOldSchemaData, key, newOptionDefault);
             } else if (newKeyedSchema.readOnly === true) {
               // If the new schema has the default set to read-only, treat it like a const and remove the value
-              removeOldSchemaData[key] = undefined;
+              setOwn(removeOldSchemaData, key, undefined);
             }
           }
 
@@ -387,7 +390,7 @@ function sanitizeDataForNewSchemaInternal<
           const oldOptionConst = getByPath(oldKeyedSchema, CONST_KEY, NO_VALUE);
           if (newOptionConst !== NO_VALUE && !deepEquals(newOptionConst, formValue)) {
             // Since this is a const, if the old value matches, replace the value with the new const otherwise clear it
-            removeOldSchemaData[key] = deepEquals(oldOptionConst, formValue) ? newOptionConst : undefined;
+            setOwn(removeOldSchemaData, key, deepEquals(oldOptionConst, formValue) ? newOptionConst : undefined);
           }
 
           // The enum replacement always runs for a select over object or array constants, which holds its
@@ -426,19 +429,19 @@ function sanitizeDataForNewSchemaInternal<
                 (!(
                   chainRootIsOldSchema &&
                   deepEquals(oldRawKeyedSchema, newRawKeyedSchema) &&
-                  deepEquals(oldData?.[key], formValue)
+                  deepEquals(getByPath(oldData, key), formValue)
                 ) &&
                   constraintMayHaveChanged<T, S, F>(
                     context,
                     rootSchema,
                     getPropertySchema<S>(resolveOldSchemaPrev(), key),
                     newRawKeyedSchema,
-                    oldData?.[key],
+                    getByPath(oldData, key),
                     formValue,
                     newKeyedSchema,
                   )))
             ) {
-              removeOldSchemaData[key] = enumReplacement;
+              setOwn(removeOldSchemaData, key, enumReplacement);
             }
           }
         }

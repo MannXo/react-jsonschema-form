@@ -1429,12 +1429,13 @@ function copyAlongPath<T>(data: T, path: FieldPathList): T {
   const root = copyOf(data as object) as Record<PropertyKey, unknown>;
   let container = root;
   for (const segment of path.slice(0, -1)) {
-    const child = container[segment];
+    // Read and written by own key, as `setByPath()` walks it, so a `__proto__` segment reaches no prototype
+    const child = getByPath(container, segment);
     if (!isObject(child) && !Array.isArray(child)) {
       break;
     }
     const copy = copyOf(child as object) as Record<PropertyKey, unknown>;
-    container[segment] = copy;
+    setOwn(container, String(segment), copy);
     container = copy;
   }
   return root as T;
@@ -1505,13 +1506,13 @@ function putBackAt<T>(
   let isWritten = false;
   Object.keys(parent).forEach((name) => {
     if (!isWritten && arrivedOrder.indexOf(name) > arrivedAt) {
-      ordered[key] = value;
+      setOwn(ordered, String(key), value);
       isWritten = true;
     }
-    ordered[name] = parent[name];
+    setOwn(ordered, name, parent[name]);
   });
   if (!isWritten) {
-    ordered[key] = value;
+    setOwn(ordered, String(key), value);
   }
   return parentPath.length ? setByPath(copyAlongPath(data, parentPath), parentPath, ordered) : (ordered as T);
 }
