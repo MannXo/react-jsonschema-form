@@ -5,13 +5,22 @@ import type {
   FieldTemplateProps,
   FormContextType,
   Registry,
+  RJSFMarkedSchema,
   RJSFSchema,
   StrictRJSFSchema,
   UiSchema,
+  UIOptionsType,
   Widget,
   WidgetProps,
 } from '@rjsf/utils';
-import { getUiOptions, isCustomWidget, isFixedItems, ITEMS_KEY, resolveDefaultWidget } from '@rjsf/utils';
+import {
+  ADDITIONAL_PROPERTY_FLAG,
+  getUiOptions,
+  isCustomWidget,
+  isFixedItems,
+  ITEMS_KEY,
+  resolveDefaultWidget,
+} from '@rjsf/utils';
 
 /** How `ArrayField` renders an array: as one widget (`multiSelect`, `customWidget`, `files`), as a list of items
  * (`fixed`, `normal`), or as the unsupported-field template when the schema declares no `items`
@@ -200,6 +209,36 @@ export function getTemplateParts(presentation: FieldPresentation | undefined) {
     help: presentation?.help.by === 'template' ? presentation.help.text : undefined,
     errors: presentation?.errors.by === 'template' ? presentation.errors.messages : undefined,
   };
+}
+
+/** Whether `schema` is the stub `retrieveSchema()` makes for an additional property, by the flag it marks it with
+ *
+ * @param schema - The schema to check
+ * @returns - True when the schema describes an additional property
+ */
+export function isAdditionalPropertySchema(schema: unknown) {
+  return Boolean((schema as RJSFMarkedSchema)?.[ADDITIONAL_PROPERTY_FLAG]);
+}
+
+/** Gets the heading an object or array draws itself under its plan: none where the plan gives its label to someone
+ * else, and otherwise the plan's label, except that the key input beside an `additionalProperties` entry already shows
+ * its key, which labels the entry, so the entry is headed by the `ui:title` or the schema `title` naming such entries
+ * where there is one
+ *
+ * @param presentation - The container's plan
+ * @param schema - The container's schema
+ * @param uiOptions - The container's ui options
+ * @returns - The heading the container draws, or the empty string for none
+ */
+export function getContainerHeading<
+  T = unknown,
+  S extends StrictRJSFSchema = RJSFSchema,
+  F extends FormContextType = FormContextType,
+>(presentation: FieldPresentation, schema: S, uiOptions: UIOptionsType<T, S, F>): string {
+  if (presentation.label.by !== 'self') {
+    return '';
+  }
+  return (isAdditionalPropertySchema(schema) && (uiOptions.title || schema.title)) || presentation.label.text;
 }
 
 /** Gets the deprecated `displayLabel` and `rawErrors` a field hands its template, for a template that doesn't read

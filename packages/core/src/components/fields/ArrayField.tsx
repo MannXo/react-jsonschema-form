@@ -15,7 +15,6 @@ import type {
   UIOptionsType,
 } from '@rjsf/utils';
 import {
-  ADDITIONAL_PROPERTY_FLAG,
   getByPath,
   toPath,
   allowAdditionalItems,
@@ -45,6 +44,7 @@ import {
   ARRAY_MODE_DEFAULT_WIDGETS,
   displaysLabel,
   getArrayFieldMode,
+  getContainerHeading,
   getWidgetLabelProps,
 } from './fieldWidgetUtils.ts';
 import RawFormDataContext, { useReadsFormData } from './RawFormDataContext.ts';
@@ -791,7 +791,7 @@ interface InternalArrayFieldProps<
  * @param presentation - The array's plan, if `SchemaField` built one
  * @param schema - The array's schema
  * @param fieldTitle - The array's own title
- * @param uiOptions - The array's ui options, read only without a plan
+ * @param uiOptions - The array's ui options
  * @returns - The `title` its template is handed
  */
 function getArrayHeading<
@@ -807,13 +807,7 @@ function getArrayHeading<
   if (!presentation) {
     return (uiBooleanOption(uiOptions.label) ?? true) ? uiOptions.title || fieldTitle : '';
   }
-  if (presentation.label.by !== 'self') {
-    return '';
-  }
-  // The key input beside an `additionalProperties` entry already shows its key, which labels the entry, so the heading
-  // the array draws itself takes the `ui:title` or the schema `title` naming such entries where there is one, as an
-  // object's does
-  return (ADDITIONAL_PROPERTY_FLAG in schema && (uiOptions.title || schema.title)) || presentation.label.text;
+  return getContainerHeading<T[], S, F>(presentation, schema, uiOptions);
 }
 
 /** Renders a normal array without any limitations of length
