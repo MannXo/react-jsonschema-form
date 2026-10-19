@@ -2361,10 +2361,13 @@ describe('oneOf', () => {
     const uiSchema = {
       'ui:field': () => <div className='custom-field'>Custom field</div>,
     };
-    it('should be rendered twice', () => {
+    it('should be rendered once, beside the option selector', () => {
       const { node } = createFormComponent({ schema, uiSchema });
-      const fields = node.querySelectorAll('.custom-field');
-      expect(fields).toHaveLength(2);
+      expect(node.querySelectorAll('.custom-field')).toHaveLength(1);
+    });
+    it('should render the selected option with its own field rather than the custom one', () => {
+      const { node } = createFormComponent({ schema, uiSchema });
+      expect(node.querySelector('input#root')).toHaveAttribute('inputmode', 'decimal');
     });
     it('should render <select>', () => {
       const { node } = createFormComponent({ schema, uiSchema });
@@ -2678,6 +2681,35 @@ describe('oneOf', () => {
 
       expect(node.querySelectorAll('.custom-field')).toHaveLength(1);
       expect(node.querySelector('input#root')).toBeNull();
+    });
+
+    it.each([
+      ['ui:field', { 'ui:field': CustomField }],
+      ['ui:options.field', { 'ui:options': { field: CustomField } }],
+    ])('renders an object field %s once, and the option with its own field', (_, uiSchema) => {
+      const { node } = createFormComponent({
+        schema: {
+          type: 'object',
+          oneOf: [{ properties: { a: { type: 'string' } } }, { properties: { b: { type: 'number' } } }],
+        },
+        uiSchema,
+      });
+
+      expect(node.querySelectorAll('.custom-field')).toHaveLength(1);
+      expect(node.querySelector('input#root_a')).toBeInTheDocument();
+    });
+
+    it.each([
+      ['inherits the uiSchema of its field', {}],
+      ['has a uiSchema of its own', { oneOf: [{}, {}] }],
+    ])('renders a ui:globalOptions field once when the option %s', (_, uiSchema) => {
+      const { node } = createFormComponent({
+        schema: { oneOf: [{ type: 'number' }, { type: 'string' }] },
+        uiSchema: { ...uiSchema, 'ui:globalOptions': { field: CustomField } },
+      });
+
+      expect(node.querySelectorAll('.custom-field')).toHaveLength(1);
+      expect(node.querySelector('input#root')).toBeInTheDocument();
     });
   });
 

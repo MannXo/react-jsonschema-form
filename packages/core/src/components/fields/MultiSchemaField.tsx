@@ -25,6 +25,7 @@ import {
   selectOptionUiSchema,
   shouldRenderOptionalField,
   TranslatableString,
+  UI_FIELD_KEY,
   UI_OPTIONS_KEY,
   withVariantId,
 } from '@rjsf/utils';
@@ -118,6 +119,20 @@ function withoutFieldText<T, S extends StrictRJSFSchema, F extends FormContextTy
   }
   const { 'ui:title': _title, 'ui:description': _description, ...rest } = uiSchema;
   return { ...rest, [UI_OPTIONS_KEY]: { ...options, title: undefined, description: undefined } };
+}
+
+/** Returns an option's `uiSchema` with no field named in it, so the option renders the field its own schema calls for.
+ * Shadowed in `ui:options` rather than only deleted, since `getUiOptions()` layers `ui:globalOptions.field` under the
+ * local entry, so deleting the local one would leave the global showing through
+ *
+ * @param uiSchema - The uiSchema the option renders with
+ * @returns - That uiSchema with its `field` shadowed
+ */
+function withoutNamedField<T, S extends StrictRJSFSchema, F extends FormContextType>(
+  uiSchema: UiSchema<T, S, F> = {},
+): UiSchema<T, S, F> {
+  const { [UI_FIELD_KEY]: _field, ...rest } = uiSchema;
+  return { ...rest, [UI_OPTIONS_KEY]: { ...uiSchema[UI_OPTIONS_KEY], field: undefined } };
 }
 
 /** The `AnyOfField` component is used to render a field in the schema that is an `anyOf`, `allOf` or `oneOf`. It tracks
@@ -225,10 +240,19 @@ function AnyOfField<T = unknown, S extends StrictRJSFSchema = RJSFSchema, F exte
   // data changes, so this only spares a render that leaves the data as it was, and the switch away from the option
   const renderedOption = useMemo(() => (option ? getRenderedOptionSchema<S>(schema, option) : null), [schema, option]);
   // Memoized, since the option's `SchemaField` keys its own memos on the uiSchema it is handed
-  const optionFieldUiSchema = useMemo(
-    () => (uiSchema && optionUiSchema === uiSchema ? withoutFieldText<T, S, F>(uiSchema) : optionUiSchema),
-    [optionUiSchema, uiSchema],
-  );
+  const optionFieldUiSchema = useMemo(() => {
+    const inheritsFieldUiSchema = uiSchema !== undefined && optionUiSchema === uiSchema;
+    const ownUiSchema = inheritsFieldUiSchema ? withoutFieldText<T, S, F>(uiSchema) : optionUiSchema;
+    // A field named for this field by its `ui:field` or `ui:globalOptions.field` renders beside the selector, as
+    // `SchemaField` renders it there rather than giving way to the options, so the option renders the field its own
+    // schema calls for rather than that one again, unless its own `uiSchema` entry names one, or clears one, for it
+    const namesOwnField = !inheritsFieldUiSchema && Object.hasOwn(getUiOptions<T, S, F>(optionUiSchema), 'field');
+    const inheritsNamedField = inheritsFieldUiSchema && Object.hasOwn(getUiOptions<T, S, F>(uiSchema), 'field');
+    if (namesOwnField || (!inheritsNamedField && globalUiOptions?.field === undefined)) {
+      return ownUiSchema;
+    }
+    return withoutNamedField<T, S, F>(ownUiSchema);
+  }, [optionUiSchema, uiSchema, globalUiOptions]);
 
   /** Callback handler to remember what the currently selected option is. In addition to that the `formData` is updated
    * to remove properties that are not part of the newly selected option schema, and then the updated data is passed to

@@ -1980,10 +1980,13 @@ describe('anyOf', () => {
     const uiSchema = {
       'ui:field': () => <div className='custom-field'>Custom field</div>,
     };
-    it('should be rendered twice', () => {
+    it('should be rendered once, beside the option selector', () => {
       const { node } = createFormComponent({ schema, uiSchema });
-      const fields = node.querySelectorAll('.custom-field');
-      expect(fields).toHaveLength(2);
+      expect(node.querySelectorAll('.custom-field')).toHaveLength(1);
+    });
+    it('should render the selected option with its own field rather than the custom one', () => {
+      const { node } = createFormComponent({ schema, uiSchema });
+      expect(node.querySelector('input#root')).toHaveAttribute('inputmode', 'decimal');
     });
     it('should render <select>', () => {
       const { node } = createFormComponent({ schema, uiSchema });
